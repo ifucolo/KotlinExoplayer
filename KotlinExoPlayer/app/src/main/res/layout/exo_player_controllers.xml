@@ -31,10 +31,13 @@
             android:gravity="center"
             android:layout_weight="0.15"/>
 
-        <SeekBar
+        <com.google.android.exoplayer2.ui.DefaultTimeBar
             android:id="@+id/exo_progress"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            app:ad_marker_color="@color/colorAccent"
+            app:scrubber_color="@color/bgAlpha"
+            app:played_color="@color/colorAccent"
             android:layout_weight="1"/>
 
 
@@ -48,25 +51,25 @@
 
 
 
-    <android.support.design.widget.FloatingActionButton android:id="@id/exo_play"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:padding="10dp"
-        style="@style/ExoMediaButton.Next"
-        android:background="@drawable/btn_app"
-        android:layout_gravity="bottom|right"
-        android:layout_marginRight="50dp"
-        android:layout_marginBottom="25dp"/>
+    <!--<android.support.design.widget.FloatingActionButton android:id="@id/exo_play"-->
+        <!--android:layout_width="50dp"-->
+        <!--android:layout_height="50dp"-->
+        <!--android:padding="10dp"-->
+        <!--style="@style/ExoMediaButton.Next"-->
+        <!--android:background="@drawable/btn_app"-->
+        <!--android:layout_gravity="bottom|right"-->
+        <!--android:layout_marginRight="50dp"-->
+        <!--android:layout_marginBottom="25dp"/>-->
 
-    <android.support.design.widget.FloatingActionButton android:id="@id/exo_play"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:padding="10dp"
-        style="@style/ExoMediaButton.Previous"
-        android:background="@drawable/btn_app"
-        android:layout_gravity="bottom|left"
-        android:layout_marginLeft="50dp"
-        android:layout_marginBottom="25dp"/>
+    <!--<android.support.design.widget.FloatingActionButton android:id="@id/exo_play"-->
+        <!--android:layout_width="50dp"-->
+        <!--android:layout_height="50dp"-->
+        <!--android:padding="10dp"-->
+        <!--style="@style/ExoMediaButton.Previous"-->
+        <!--android:background="@drawable/btn_app"-->
+        <!--android:layout_gravity="bottom|left"-->
+        <!--android:layout_marginLeft="50dp"-->
+        <!--android:layout_marginBottom="25dp"/>-->
 
     <android.support.design.widget.FloatingActionButton android:id="@id/exo_play"
         android:layout_width="60dp"

@@ -8,13 +8,9 @@ import android.text.TextUtils
 import android.view.KeyEvent
 import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.source.TrackGroupArray
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.PlaybackControlView
 import com.google.android.exoplayer2.source.BehindLiveWindowException
 import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.trackselection.AdaptiveVideoTrackSelection
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.trackselection.TrackSelection
 import com.google.android.exoplayer2.upstream.DataSource
 import java.net.CookiePolicy.ACCEPT_ORIGINAL_SERVER
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
@@ -26,6 +22,7 @@ import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.C
 import android.R.attr.mimeType
 import butterknife.bindView
+import com.google.android.exoplayer2.drm.*
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil
 import com.google.android.exoplayer2.mediacodec.MediaCodecRenderer
@@ -35,18 +32,17 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.source.smoothstreaming.DefaultSsChunkSource
 import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource
+import com.google.android.exoplayer2.trackselection.*
 import com.google.android.exoplayer2.ui.SimpleExoPlayerView
+import com.google.android.exoplayer2.upstream.HttpDataSource
+import com.google.android.exoplayer2.util.Util
+import java.util.*
+import kotlin.coroutines.experimental.EmptyCoroutineContext.plus
 
 class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackControlView.VisibilityListener {
 
     val BANDWIDTH_METER = DefaultBandwidthMeter()
     var DEFAULT_COOKIE_MANAGER: CookieManager = CookieManager()
-
-//    companion object {
-//        var DEFAULT_COOKIE_MANAGER: CookieManager = CookieManager()
-//        var DEFAULT_COOKIE_MANAGER: CookiePolicy = setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER);
-//    }
-
 
     var mediaDataSourceFactory: DataSource.Factory? = null
     var mainHandler: Handler = Handler()
@@ -59,14 +55,12 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
 
     private val simpleExoPlayerView: SimpleExoPlayerView by bindView(R.id.simpleExoplayer)
 
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
 
-        mediaDataSourceFactory = buildDataSourceFactory(true)
+        mediaDataSourceFactory = buildDataSourceFactory()
         mainHandler = Handler()
         if (CookieHandler.getDefault() !== DEFAULT_COOKIE_MANAGER) {
             CookieHandler.setDefault(DEFAULT_COOKIE_MANAGER)
@@ -83,26 +77,21 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         val url = "http://storage.googleapis.com/exoplayer-test-media-0/play.mp3"
 
         if (player == null) {
-            val preferExtensionDecoders = false
+            val adaptiveTrackSelectionFactory: TrackSelection.Factory = AdaptiveTrackSelection.Factory(BANDWIDTH_METER)
 
-            @SimpleExoPlayer.ExtensionRendererMode val extensionRendererMode = if ((getApplication() as KotlinExoplayerApplication).useExtensionRenderers())
-                if (preferExtensionDecoders)
-                    SimpleExoPlayer.EXTENSION_RENDERER_MODE_PREFER
-                else
-                    SimpleExoPlayer.EXTENSION_RENDERER_MODE_ON
-            else
-                SimpleExoPlayer.EXTENSION_RENDERER_MODE_OFF
+            trackSelector = DefaultTrackSelector(adaptiveTrackSelectionFactory)
 
-            val videoTrackSelectionFactory = AdaptiveVideoTrackSelection.Factory(BANDWIDTH_METER)
-            trackSelector = DefaultTrackSelector(videoTrackSelectionFactory)
+            val drmSessionManager : DrmSessionManager<FrameworkMediaCrypto> = buildDrmSessionManager(C.CLEARKEY_UUID, url, null.toString())
 
-            player = ExoPlayerFactory.newSimpleInstance(this, trackSelector, DefaultLoadControl(), null, extensionRendererMode)
+            @DefaultRenderersFactory.ExtensionRendererMode val extensionRendererMode = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
 
-            player!!.addListener(this)
 
+            val renderersFactory : DefaultRenderersFactory = DefaultRenderersFactory(this, drmSessionManager, extensionRendererMode)
+
+            player = ExoPlayerFactory.newSimpleInstance(renderersFactory, trackSelector)
             simpleExoPlayerView.player = player
-
             player!!.playWhenReady = shouldAutoPlay
+
             playerNeedsSource = true
 
         }
@@ -120,7 +109,7 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
 
             val mediaSource = mediaSources[0]
 
-            val haveResumePosition = resumeWindow !== C.INDEX_UNSET
+            val haveResumePosition =  resumeWindow != C.INDEX_UNSET
             if (haveResumePosition) {
                 player!!.seekTo(resumeWindow, resumePosition)
             }
@@ -132,15 +121,27 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         }
     }
 
+    fun buildDrmSessionManager(uuid: UUID , licenseUrl: String , keyRequestPropertiesArray: String): DrmSessionManager<FrameworkMediaCrypto> {
+        val drmCallback: HttpMediaDrmCallback  =  HttpMediaDrmCallback(licenseUrl, buildHttpDataSourceFactory(false));
+
+        for((i) in keyRequestPropertiesArray.withIndex()) {
+            drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i].toString(), keyRequestPropertiesArray[i].toString())
+        }
+
+        return  DefaultDrmSessionManager(uuid, FrameworkMediaDrm.newInstance(uuid), drmCallback, null, mainHandler, null)
+    }
+
+
+
     fun buildMediaSource(uri: Uri, overrideExtension: String): MediaSource {
-        val type = com.google.android.exoplayer2.util.Util.inferContentType(if (!TextUtils.isEmpty(overrideExtension))
-            "." + overrideExtension
+        val type = if (TextUtils.isEmpty(overrideExtension))
+            Util.inferContentType(uri)
         else
-            uri.lastPathSegment)
+            Util.inferContentType("." + overrideExtension)
         when (type) {
-            C.TYPE_SS -> return SsMediaSource(uri, buildDataSourceFactory(false),
+            C.TYPE_SS -> return SsMediaSource(uri, buildDataSourceFactory(),
                     DefaultSsChunkSource.Factory(mediaDataSourceFactory), mainHandler, null)
-            C.TYPE_DASH -> return DashMediaSource(uri, buildDataSourceFactory(false),
+            C.TYPE_DASH -> return DashMediaSource(uri, buildDataSourceFactory(),
                     DefaultDashChunkSource.Factory(mediaDataSourceFactory), mainHandler, null)
             C.TYPE_HLS -> return HlsMediaSource(uri, mediaDataSourceFactory, mainHandler, null)
             C.TYPE_OTHER -> return ExtractorMediaSource(uri, mediaDataSourceFactory, DefaultExtractorsFactory(),
@@ -151,10 +152,18 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         }
     }
 
-    protected fun buildDataSourceFactory(useBandwidthMeter: Boolean): DataSource.Factory {
-        return (application as KotlinExoplayerApplication)
-                .buildDataSourceFactory(if (useBandwidthMeter) BANDWIDTH_METER else null!!)
+    fun buildHttpDataSourceFactory (useBandwidthMeter: Boolean): HttpDataSource.Factory {
+        return ((application as KotlinExoplayerApplication)).buildHttpDataSourceFactory(BANDWIDTH_METER)
     }
+
+    fun buildDataSourceFactory(): DataSource.Factory {
+        return (application as KotlinExoplayerApplication).buildDataSourceFactory(BANDWIDTH_METER)
+    }
+
+    override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
 
     override fun onTimelineChanged(timeline: Timeline, manifest: Any) {}
 
@@ -163,10 +172,6 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
     override fun onLoadingChanged(isLoading: Boolean) {}
 
     override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
-
-        if (playWhenReady) {
-
-        }
     }
 
     override fun onPlayerError(e: ExoPlaybackException) {
@@ -257,8 +262,6 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
             player!!.release()
             player = null
             trackSelector = null
-
-
         }
     }
 

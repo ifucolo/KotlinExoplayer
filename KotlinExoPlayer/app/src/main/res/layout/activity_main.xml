@@ -11,8 +11,7 @@
        android:id="@+id/simpleExoplayer"
        android:layout_width="match_parent"
        android:layout_height="match_parent"
-       app:controller_layout_id="@layout/exo_player_controllers"
-       app:player_layout_id="@layout/exo_player_background">
+       app:controller_layout_id="@layout/exo_player_controllers">
    </com.google.android.exoplayer2.ui.SimpleExoPlayerView>
 
 </android.support.constraint.ConstraintLayout>
