@@ -40,38 +40,18 @@
             app:played_color="@color/colorAccent"
             android:layout_weight="1"/>
 
-
         <TextView
             android:id="@+id/exo_duration"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:layout_weight="0.15"/>
+
     </LinearLayout>
 
 
-
-    <!--<android.support.design.widget.FloatingActionButton android:id="@id/exo_play"-->
-        <!--android:layout_width="50dp"-->
-        <!--android:layout_height="50dp"-->
-        <!--android:padding="10dp"-->
-        <!--style="@style/ExoMediaButton.Next"-->
-        <!--android:background="@drawable/btn_app"-->
-        <!--android:layout_gravity="bottom|right"-->
-        <!--android:layout_marginRight="50dp"-->
-        <!--android:layout_marginBottom="25dp"/>-->
-
-    <!--<android.support.design.widget.FloatingActionButton android:id="@id/exo_play"-->
-        <!--android:layout_width="50dp"-->
-        <!--android:layout_height="50dp"-->
-        <!--android:padding="10dp"-->
-        <!--style="@style/ExoMediaButton.Previous"-->
-        <!--android:background="@drawable/btn_app"-->
-        <!--android:layout_gravity="bottom|left"-->
-        <!--android:layout_marginLeft="50dp"-->
-        <!--android:layout_marginBottom="25dp"/>-->
-
-    <android.support.design.widget.FloatingActionButton android:id="@id/exo_play"
+    <android.support.design.widget.FloatingActionButton
+        android:id="@id/exo_play"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:padding="10dp"
@@ -80,7 +60,8 @@
         android:background="@drawable/btn_app"
         android:layout_marginBottom="20dp"/>
 
-    <android.support.design.widget.FloatingActionButton android:id="@id/exo_pause"
+    <android.support.design.widget.FloatingActionButton
+        android:id="@id/exo_pause"
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:padding="10dp"
@@ -88,6 +69,5 @@
         android:layout_gravity="bottom|center"
         android:background="@drawable/btn_app"
         android:layout_marginBottom="20dp"/>
-
 
 </FrameLayout>

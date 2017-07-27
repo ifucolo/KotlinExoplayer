@@ -37,7 +37,6 @@ import com.google.android.exoplayer2.ui.SimpleExoPlayerView
 import com.google.android.exoplayer2.upstream.HttpDataSource
 import com.google.android.exoplayer2.util.Util
 import java.util.*
-import kotlin.coroutines.experimental.EmptyCoroutineContext.plus
 
 class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackControlView.VisibilityListener {
 
@@ -67,6 +66,8 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         }
 
         simpleExoPlayerView.setControllerVisibilityListener(this)
+        simpleExoPlayerView.controllerShowTimeoutMs = 500000000
+
 
         initializePlayer(true)
     }
@@ -77,32 +78,28 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         val url = "http://storage.googleapis.com/exoplayer-test-media-0/play.mp3"
 
         if (player == null) {
-            val adaptiveTrackSelectionFactory: TrackSelection.Factory = AdaptiveTrackSelection.Factory(BANDWIDTH_METER)
-
-            trackSelector = DefaultTrackSelector(adaptiveTrackSelectionFactory)
-
-            val drmSessionManager : DrmSessionManager<FrameworkMediaCrypto> = buildDrmSessionManager(C.CLEARKEY_UUID, url, null.toString())
-
             @DefaultRenderersFactory.ExtensionRendererMode val extensionRendererMode = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
 
-
+            val adaptiveTrackSelectionFactory: TrackSelection.Factory = AdaptiveTrackSelection.Factory(BANDWIDTH_METER)
+            val drmSessionManager : DrmSessionManager<FrameworkMediaCrypto> = buildDrmSessionManager(C.CLEARKEY_UUID, url, null.toString())
             val renderersFactory : DefaultRenderersFactory = DefaultRenderersFactory(this, drmSessionManager, extensionRendererMode)
+
+            trackSelector = DefaultTrackSelector(adaptiveTrackSelectionFactory)
 
             player = ExoPlayerFactory.newSimpleInstance(renderersFactory, trackSelector)
             simpleExoPlayerView.player = player
             player!!.playWhenReady = shouldAutoPlay
 
             playerNeedsSource = true
-
         }
 
         if (playerNeedsSource && !TextUtils.isEmpty(url)) {
             val uri = Uri.parse(url)
 
             if (com.google.android.exoplayer2.util.Util.maybeRequestReadExternalStoragePermission(this, uri)) {
-                // The player will be reinitialized if the permission is granted.
                 return
             }
+
             val mediaSources = arrayOfNulls<MediaSource>(1)
 
             mediaSources[0] = buildMediaSource(uri, "")
@@ -121,8 +118,9 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         }
     }
 
+
     fun buildDrmSessionManager(uuid: UUID , licenseUrl: String , keyRequestPropertiesArray: String): DrmSessionManager<FrameworkMediaCrypto> {
-        val drmCallback: HttpMediaDrmCallback  =  HttpMediaDrmCallback(licenseUrl, buildHttpDataSourceFactory(false));
+        val drmCallback: HttpMediaDrmCallback  =  HttpMediaDrmCallback(licenseUrl, buildHttpDataSourceFactory())
 
         for((i) in keyRequestPropertiesArray.withIndex()) {
             drmCallback.setKeyRequestProperty(keyRequestPropertiesArray[i].toString(), keyRequestPropertiesArray[i].toString())
@@ -152,7 +150,7 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         }
     }
 
-    fun buildHttpDataSourceFactory (useBandwidthMeter: Boolean): HttpDataSource.Factory {
+    fun buildHttpDataSourceFactory (): HttpDataSource.Factory {
         return ((application as KotlinExoplayerApplication)).buildHttpDataSourceFactory(BANDWIDTH_METER)
     }
 
@@ -160,9 +158,7 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         return (application as KotlinExoplayerApplication).buildDataSourceFactory(BANDWIDTH_METER)
     }
 
-    override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters?) {}
 
 
     override fun onTimelineChanged(timeline: Timeline, manifest: Any) {}
@@ -175,47 +171,17 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
     }
 
     override fun onPlayerError(e: ExoPlaybackException) {
-        var errorString: String? = null
-        if (e.type == ExoPlaybackException.TYPE_RENDERER) {
-            val cause = e.rendererException
-            if (cause is MediaCodecRenderer.DecoderInitializationException) {
-                // Special case for decoder initialization failures.
-                val decoderInitializationException = cause
-                if (decoderInitializationException.decoderName == null) {
-                    if (decoderInitializationException.cause is MediaCodecUtil.DecoderQueryException) {
-                        // errorString = getString(R.string.error_querying_decoders)
-                    } else if (decoderInitializationException.secureDecoderRequired) {
-                        // errorString = getString(R.string.error_no_secure_decoder,
-                        // decoderInitializationException.mimeType)
-                    } else {
-                        //errorString = getString(R.string.error_no_decoder,
-                        //    decoderInitializationException.mimeType)
-                    }
-                } else {
-                    // errorString = getString(R.string.error_instantiating_decoder,
-                    // decoderInitializationException.decoderName)
-                }
-            }
-        }
-        if (errorString != null) {
-            showToast(errorString)
-        }
         playerNeedsSource = true
         if (isBehindLiveWindow(e)) {
             clearResumePosition()
             initializePlayer(true)
         } else
             updateResumePosition()
-
     }
 
     override fun onPositionDiscontinuity() {
-        if (playerNeedsSource) {
-            // This will only occur if the user has performed a seek whilst in the error state. Update the
-            // resume position so that if the user then retries, playback will resume from the position to
-            // which they seeked.
+        if (playerNeedsSource)
             updateResumePosition()
-        }
     }
 
     fun updateResumePosition() {
@@ -245,13 +211,7 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
         return false
     }
 
-    fun showToast(message: String) {
-        Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
-    }
-
     override fun onVisibilityChange(visibility: Int) {
-        // layoutPlayer.setVisibility(View.VISIBLE);
-
         simpleExoPlayerView.requestFocus()
         simpleExoPlayerView.showController()
     }
@@ -266,9 +226,7 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // Show the controls on any key event.
         simpleExoPlayerView.showController()
-        // If the event was not handled then see if the player view can handle it as a media key event.
         return super.dispatchKeyEvent(event) || simpleExoPlayerView.dispatchMediaKeyEvent(event)
     }
 
