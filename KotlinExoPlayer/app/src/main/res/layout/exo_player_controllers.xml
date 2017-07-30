@@ -26,26 +26,24 @@
 
         <TextView
             android:id="@+id/exo_position"
-            android:layout_width="0dp"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:layout_weight="0.15"/>
+            android:gravity="center"/>
 
         <com.google.android.exoplayer2.ui.DefaultTimeBar
             android:id="@+id/exo_progress"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             app:ad_marker_color="@color/colorAccent"
             app:scrubber_color="@color/bgAlpha"
-            app:played_color="@color/colorAccent"
-            android:layout_weight="1"/>
+            app:played_color="@color/colorAccent"/>
 
         <TextView
             android:id="@+id/exo_duration"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:layout_weight="0.15"/>
+            android:gravity="center" />
 
     </LinearLayout>
 

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">KotlinExoPlayer</string>
+
+    <string name="auido_url">http://storage.googleapis.com/exoplayer-test-media-0/play.mp3</string>
 </resources>

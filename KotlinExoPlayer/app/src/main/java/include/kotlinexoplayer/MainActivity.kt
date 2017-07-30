@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity(), ExoPlayer.EventListener, PlaybackContr
 
     fun initializePlayer(shouldAutoPlay: Boolean) {
 
-        val url = "http://storage.googleapis.com/exoplayer-test-media-0/play.mp3"
+        val url = getString(R.string.auido_url)
 
         if (player == null) {
             @DefaultRenderersFactory.ExtensionRendererMode val extensionRendererMode = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
